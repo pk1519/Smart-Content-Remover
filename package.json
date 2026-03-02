@@ -1,0 +1,23 @@
+{
+  "name": "coursera-smart-content-remover",
+  "version": "1.0.0",
+  "description": "Smart Content Remover - A tool for removing unwanted content from web pages",
+  "main": "smart-content-remover.html",
+  "scripts": {
+    "build": "echo 'Build complete - static site ready for deployment'",
+    "dev": "echo 'Starting development server...' && npx serve .",
+    "start": "npm run dev"
+  },
+  "keywords": [
+    "netlify",
+    "static-site",
+    "deployment",
+    "content-remover",
+    "web-tool"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "devDependencies": {
+    "serve": "^14.2.1"
+  }
+}

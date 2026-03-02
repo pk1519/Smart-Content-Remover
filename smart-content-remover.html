@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Content Remover</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a0f;
+    --panel: #111118;
+    --border: #222230;
+    --accent: #e8ff4e;
+    --accent2: #ff4e8e;
+    --accent3: #4edfff;
+    --text: #e8e8f0;
+    --muted: #5a5a7a;
+    --success: #4effa0;
+  }
+
+  html, body {
+    height: 100%;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* Noise texture overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.4;
+  }
+
+  header {
+    position: relative;
+    z-index: 10;
+    padding: 28px 40px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .logo-mark {
+    width: 36px;
+    height: 36px;
+    background: var(--accent);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .logo-mark svg { width: 20px; height: 20px; }
+
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.4rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--text);
+  }
+
+  .tagline {
+    font-size: 0.7rem;
+    color: var(--muted);
+    margin-left: auto;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  main {
+    position: relative;
+    z-index: 10;
+    flex: 1;
+    display: flex;
+    gap: 0;
+    padding: 0;
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  .panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--border);
+    min-width: 0;
+  }
+
+  .panel:last-child { border-right: none; }
+
+  .panel-header {
+    padding: 18px 24px 14px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--panel);
+  }
+
+  .panel-num {
+    width: 22px;
+    height: 22px;
+    border-radius: 4px;
+    font-size: 0.65rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .panel-1 .panel-num { background: rgba(232,255,78,0.15); color: var(--accent); border: 1px solid rgba(232,255,78,0.3); }
+  .panel-2 .panel-num { background: rgba(255,78,142,0.15); color: var(--accent2); border: 1px solid rgba(255,78,142,0.3); }
+  .panel-3 .panel-num { background: rgba(78,223,255,0.15); color: var(--accent3); border: 1px solid rgba(78,223,255,0.3); }
+
+  .panel-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .panel-1 .panel-title { color: var(--accent); }
+  .panel-2 .panel-title { color: var(--accent2); }
+  .panel-3 .panel-title { color: var(--accent3); }
+
+  .panel-sub {
+    font-size: 0.65rem;
+    color: var(--muted);
+    margin-left: auto;
+  }
+
+  .panel-body {
+    flex: 1;
+    padding: 0;
+    position: relative;
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  textarea {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.82rem;
+    line-height: 1.7;
+    padding: 20px 24px;
+    resize: none;
+    outline: none;
+    caret-color: var(--accent);
+    overflow-y: auto;
+  }
+
+  .panel-1 textarea { caret-color: var(--accent); }
+  .panel-2 textarea { caret-color: var(--accent2); }
+
+  textarea::placeholder { color: var(--muted); }
+
+  textarea:focus { background: rgba(255,255,255,0.01); }
+
+  .output-area {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    padding: 20px 24px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.82rem;
+    line-height: 1.7;
+    color: var(--text);
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-y: auto;
+  }
+
+  .output-empty {
+    color: var(--muted);
+    font-style: italic;
+  }
+
+  .panel-footer {
+    padding: 14px 24px;
+    border-top: 1px solid var(--border);
+    background: var(--panel);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .char-count {
+    font-size: 0.65rem;
+    color: var(--muted);
+  }
+
+  .btn {
+    margin-left: auto;
+    padding: 8px 18px;
+    border-radius: 6px;
+    border: none;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.72rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+
+  .btn-process {
+    background: var(--accent);
+    color: #0a0a0f;
+  }
+
+  .btn-process:hover {
+    background: #f5ff80;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 20px rgba(232,255,78,0.3);
+  }
+
+  .btn-process:active { transform: translateY(0); }
+
+  .btn-copy {
+    background: transparent;
+    color: var(--accent3);
+    border: 1px solid rgba(78,223,255,0.3);
+  }
+
+  .btn-copy:hover {
+    background: rgba(78,223,255,0.1);
+    border-color: var(--accent3);
+    transform: translateY(-1px);
+  }
+
+  .btn-copy.copied {
+    color: var(--success);
+    border-color: rgba(78,224,160,0.4);
+    background: rgba(78,255,160,0.08);
+  }
+
+  .btn-clear {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    padding: 8px 12px;
+  }
+
+  .btn-clear:hover { color: var(--accent2); border-color: var(--accent2); }
+
+  .divider-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    flex-shrink: 0;
+    background: var(--bg);
+    border-right: 1px solid var(--border);
+    gap: 12px;
+    padding: 20px 0;
+    position: relative;
+    z-index: 5;
+  }
+
+  .arrow-icon {
+    color: var(--muted);
+    font-size: 1.2rem;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    letter-spacing: 2px;
+  }
+
+  .stats-bar {
+    padding: 10px 40px;
+    background: var(--panel);
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 32px;
+    align-items: center;
+    position: relative;
+    z-index: 10;
+  }
+
+  .stat {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.68rem;
+  }
+
+  .stat-label { color: var(--muted); }
+  .stat-value { font-weight: 500; color: var(--text); }
+  .stat-value.removed { color: var(--accent2); }
+  .stat-value.fresh { color: var(--accent3); }
+
+  .highlight-removed {
+    background: rgba(255,78,142,0.15);
+    color: var(--accent2);
+    text-decoration: line-through;
+    border-radius: 2px;
+  }
+
+  @media (max-width: 900px) {
+    main { flex-direction: column; }
+    .panel { border-right: none; border-bottom: 1px solid var(--border); }
+    .panel:last-child { border-bottom: none; }
+    textarea, .output-area { min-height: 200px; }
+    header { padding: 18px 20px; }
+    .stats-bar { padding: 10px 20px; flex-wrap: wrap; gap: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-mark">
+    <svg viewBox="0 0 20 20" fill="none">
+      <path d="M3 10h14M3 6h10M3 14h7" stroke="#0a0a0f" stroke-width="2" stroke-linecap="round"/>
+      <circle cx="16" cy="14" r="3" fill="#0a0a0f"/>
+      <path d="M15 14l1 1 2-2" stroke="#e8ff4e" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </div>
+  <h1>Smart Content Remover</h1>
+  <span class="tagline">Paste · Strip · Copy</span>
+</header>
+
+<main>
+  <!-- Panel 1: Original Content -->
+  <div class="panel panel-1">
+    <div class="panel-header">
+      <div class="panel-num">01</div>
+      <span class="panel-title">Original Content</span>
+      <span class="panel-sub">Paste your text</span>
+    </div>
+    <div class="panel-body">
+      <textarea id="originalContent" placeholder="Paste your full content here...&#10;&#10;Everything you want to clean up goes in this panel. It can be an article, a document, a piece of code — anything you want to filter."></textarea>
+    </div>
+    <div class="panel-footer">
+      <span class="char-count" id="count1">0 chars</span>
+      <button class="btn btn-clear" onclick="clearPanel('originalContent','count1','removeWords')">✕ Clear</button>
+    </div>
+  </div>
+
+  <!-- Panel 2: Words/Phrases to Remove -->
+  <div class="panel panel-2">
+    <div class="panel-header">
+      <div class="panel-num">02</div>
+      <span class="panel-title">Content to Remove</span>
+      <span class="panel-sub">One per line</span>
+    </div>
+    <div class="panel-body">
+      <textarea id="removeWords" placeholder="Type words or phrases to remove...&#10;&#10;Enter each word or phrase on a new line:&#10;&#10;example word&#10;unwanted phrase&#10;remove this too"></textarea>
+    </div>
+    <div class="panel-footer">
+      <span class="char-count" id="count2">0 entries</span>
+      <button class="btn btn-process" onclick="processContent()">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+          <path d="M2 6.5h9M7 3l4 3.5L7 10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Process
+      </button>
+    </div>
+  </div>
+
+  <!-- Panel 3: Fresh Content -->
+  <div class="panel panel-3">
+    <div class="panel-header">
+      <div class="panel-num">03</div>
+      <span class="panel-title">Fresh Content</span>
+      <span class="panel-sub">Ready to copy</span>
+    </div>
+    <div class="panel-body">
+      <div class="output-area" id="outputContent">
+        <span class="output-empty">Your cleaned content will appear here after processing...</span>
+      </div>
+    </div>
+    <div class="panel-footer">
+      <span class="char-count" id="count3">—</span>
+      <button class="btn btn-copy" id="copyBtn" onclick="copyOutput()">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+          <rect x="1" y="3" width="8" height="9" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M4 3V2a1 1 0 011-1h5a1 1 0 011 1v8a1 1 0 01-1 1h-1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        Copy
+      </button>
+    </div>
+  </div>
+</main>
+
+<div class="stats-bar">
+  <div class="stat">
+    <span class="stat-label">Original:</span>
+    <span class="stat-value" id="statOriginal">—</span>
+  </div>
+  <div class="stat">
+    <span class="stat-label">Removals:</span>
+    <span class="stat-value removed" id="statRemoved">—</span>
+  </div>
+  <div class="stat">
+    <span class="stat-label">Fresh:</span>
+    <span class="stat-value fresh" id="statFresh">—</span>
+  </div>
+  <div class="stat">
+    <span class="stat-label">Stripped:</span>
+    <span class="stat-value removed" id="statDiff">—</span>
+  </div>
+</div>
+
+<script>
+  const orig = document.getElementById('originalContent');
+  const removeW = document.getElementById('removeWords');
+  let freshText = ''; // store processed result for reliable copy
+
+  orig.addEventListener('input', () => {
+    document.getElementById('count1').textContent = orig.value.length + ' chars';
+  });
+
+  removeW.addEventListener('input', () => {
+    const lines = removeW.value.split('\n').filter(l => l.trim());
+    document.getElementById('count2').textContent = lines.length + ' entr' + (lines.length === 1 ? 'y' : 'ies');
+  });
+
+  // Allow Ctrl+Enter to process
+  document.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') processContent();
+  });
+
+  function processContent() {
+    const content = orig.value;
+    const wordsToRemove = removeW.value.split('\n').map(l => l.trim()).filter(Boolean);
+
+    if (!content.trim()) {
+      flashPanel('originalContent');
+      return;
+    }
+
+    let result = content;
+
+    wordsToRemove.forEach(word => {
+      if (!word) return;
+      const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(escaped, 'gi');
+      result = result.replace(regex, '');
+    });
+
+    // Clean up extra spaces/lines
+    result = result.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
+
+    freshText = result; // store for copy
+
+    const output = document.getElementById('outputContent');
+    if (result) {
+      output.textContent = result;
+    } else {
+      freshText = '';
+      output.innerHTML = '<span class="output-empty">All content was removed!</span>';
+    }
+
+    // Stats
+    document.getElementById('count3').textContent = result.length + ' chars';
+    document.getElementById('statOriginal').textContent = content.length + ' chars';
+    document.getElementById('statRemoved').textContent = wordsToRemove.length + ' rules';
+    document.getElementById('statFresh').textContent = result.length + ' chars';
+    const diff = content.length - result.length;
+    document.getElementById('statDiff').textContent = diff > 0 ? '-' + diff + ' chars' : 'nothing';
+
+    // Reset copy button
+    resetCopyBtn();
+  }
+
+  function copyOutput() {
+    if (!freshText) return;
+
+    navigator.clipboard.writeText(freshText).then(() => {
+      const btn = document.getElementById('copyBtn');
+      btn.classList.add('copied');
+      btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 7l3 3 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Copied!`;
+      setTimeout(resetCopyBtn, 2000);
+    }).catch(() => {
+      // Fallback for browsers that block clipboard
+      const ta = document.createElement('textarea');
+      ta.value = freshText;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      const btn = document.getElementById('copyBtn');
+      btn.classList.add('copied');
+      btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 7l3 3 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Copied!`;
+      setTimeout(resetCopyBtn, 2000);
+    });
+  }
+
+  function resetCopyBtn() {
+    const btn = document.getElementById('copyBtn');
+    btn.classList.remove('copied');
+    btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="1" y="3" width="8" height="9" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M4 3V2a1 1 0 011-1h5a1 1 0 011 1v8a1 1 0 01-1 1h-1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg> Copy`;
+  }
+
+  function clearPanel(textareaId, countId) {
+    document.getElementById(textareaId).value = '';
+    const el = document.getElementById(countId);
+    if (countId === 'count1') el.textContent = '0 chars';
+    else el.textContent = '0 entries';
+    freshText = '';
+    document.getElementById('outputContent').innerHTML = '<span class="output-empty">Your cleaned content will appear here after processing...</span>';
+    document.getElementById('count3').textContent = '—';
+    ['statOriginal','statRemoved','statFresh','statDiff'].forEach(id => {
+      document.getElementById(id).textContent = '—';
+    });
+  }
+
+  function flashPanel(id) {
+    const el = document.getElementById(id);
+    el.style.boxShadow = 'inset 0 0 0 2px rgba(255,78,142,0.6)';
+    setTimeout(() => el.style.boxShadow = '', 800);
+  }
+</script>
+</body>
+</html>
