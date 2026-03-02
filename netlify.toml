@@ -1,17 +1,7 @@
 [build]
   publish = "."
-  command = ""
-
-[build.environment]
-  NODE_VERSION = "18"
 
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 404
-
-[context.production.environment]
-  NODE_ENV = "production"
-
-[context.deploy-preview.environment]
-  NODE_ENV = "development"
